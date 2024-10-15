@@ -26,8 +26,8 @@ let config = {
             }
         }
     },
-    width: 1000,
-    height: 800,
+    width: 960,
+    height: 720,
     //add more scenes here
     scene: [Load, Map]
 }

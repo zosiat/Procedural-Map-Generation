@@ -7,17 +7,33 @@ class Load extends Phaser.Scene {
 
         this.load.setPath("./assets/");
 
-        // Load tilemap information
-        //this.load.image("tilemap tiles", "tilemap_packed.png");         // Packed tilemap
+        //load tilemap information
+        //this.load.image("tilemap tiles", "mapPack_tilesheet.png");         // Packed tilemap
+        this.load.image("grass", "grassTile.png");
+        this.load.image("grass2", "grass2Tile.png");
+        //this.load.image("sand", "sandTile.png");
+        this.load.image("dirt", "dirtTile.png");
+        this.load.image("dirt2", "dirt2Tile.png");
+        this.load.image("water", "waterTile.png");
+        this.load.image("water2", "water2Tile.png");
+        this.load.image("stone", "stoneTile.png");
 
-        //this.load.tilemapTiledJSON("Azure Level", "Azure Level.tmj");   // Tilemap in JSON
 
-        // Load the tilemap as a spritesheet
-        this.load.spritesheet("tilemap sheet", "tilemap_packed.png", {
-            frameWidth: 16,
-            frameHeight: 16
-        });
+        //load the tilemap as a spritesheet
+        //this.load.spritesheet("tilemap sheet", "tilemap_packed.png", {
+        //    frameWidth: 16,
+        //    frameHeight: 16
+        //});
 
-   
+    }
+
+    create(){
+        console.log("Assets preloaded");  // Debugging line
+        this.scene.start("mapScene");
+    }
+
+    //empty because load never gets here
+    update(){
+
     }
 }
