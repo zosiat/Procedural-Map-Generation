@@ -11,6 +11,7 @@ class Map extends Phaser.Scene {
 
         //setting the initial scale
         this.scale = 0.08;
+        this.move = true;
     }
 
     create() {
@@ -22,6 +23,7 @@ class Map extends Phaser.Scene {
         this.reload = this.input.keyboard.addKey('R');
         this.shrink = this.input.keyboard.addKey('COMMA');
         this.grow = this.input.keyboard.addKey('PERIOD');
+        this.cursors = this.input.keyboard.createCursorKeys();
 
         //tilemap dimensions (min 20 tiles wide, 15 tiles tall)
         this.mapWidth = 60;
@@ -37,46 +39,96 @@ class Map extends Phaser.Scene {
         //generate the map using perlin noise
         this.generateMap();
 
-        //create tiles based on generated map data
+        //create tiles based on generated map
         this.createTiles();
 
-        //camera centered
+        //create player
+        this.createPlayer();
+
+        //filter spawn points (non-water and non-water2 tiles)
+        const validTiles = [];
+        for (let y = 0; y < this.mapHeight; y++) {
+            for (let x = 0; x < this.mapWidth; x++) {
+                if (this.mapData[y][x] !== "water" && this.mapData[y][x] !== "water2") {
+                    validTiles.push({ x: x * this.tileSize, y: y * this.tileSize });
+                }
+            }
+        }
+
+        //random point not in water
+        const randomIndex = Phaser.Math.Between(0, validTiles.length - 1);
+        const spawnPoint = validTiles[randomIndex];
+
+        //camera
         this.cameras.main.setBounds(0, 0, this.mapWidth * this.tileSize, this.mapHeight * this.tileSize);
         this.cameras.main.centerOn(this.mapWidth * this.tileSize / 2, this.mapHeight * this.tileSize / 2);
 
         //instruction text
-        document.getElementById('description').innerHTML = '<h2>Map.js</h2><br>R: Restart Scene (to randomize tiles)';
+        document.getElementById('description').innerHTML = '<h2>Map.js</h2><br>R: Restart Scene (to randomize tiles)</h2><br><: Shrink Noise Window</h2><br>>: Expand Noise Window</h2><br>Arrow Keys: Movement';
     }
 
     update() {
+
+        //movement logic
+        if (this.cursors.left.isDown) {
+            this.player.setVelocityX(-160); //left
+        } else if (this.cursors.right.isDown) {
+            this.player.setVelocityX(160); //right
+        } else {
+            this.player.setVelocityX(0);
+        }
+
+        if (this.cursors.up.isDown) {
+            this.player.setVelocityY(-160); //up
+        } else if (this.cursors.down.isDown) {
+            this.player.setVelocityY(160); //down
+        } else {
+            this.player.setVelocityY(0); 
+        }
+
         //restart
         if (Phaser.Input.Keyboard.JustDown(this.reload)) {
+            //clearing the seed
             this.initPerlin(this.seedValue);
             this.scene.restart();
         }
 
         //increase scale
         if (Phaser.Input.Keyboard.JustDown(this.grow)) {
-            this.scale += 0.1;
-            console.log("increasing");
+            this.scale += 0.01;
+            console.log("increasing scale to", this.scale);
+            this.clearTiles();
+            this.generateMap();
+            this.createTiles();
+            this.createPlayer();
         }
         
         //decrease scale
         if (Phaser.Input.Keyboard.JustDown(this.shrink)) {
-            this.scale = Math.max(0.1, this.scale - 0.01);
-            console.log("decreasing");
+            this.scale = Math.max(0.01, this.scale - 0.01);
+            console.log("decreasing scale to", this.scale);
+            this.clearTiles();
+            this.generateMap();
+            this.createTiles();
+            this.createPlayer();
+        }
+
+        //reset scale if NaN
+        if (isNaN(this.scale)) {
+            console.error('Scale is NaN! Resetting to default.');
+            this.scale = 0.08; //resets default
         }
     }
 
     generateMap() {
-        const scale = 0.08; //adjustable
         const seed = this.seed; //store seed
     
         for (let y = 0; y < this.mapHeight; y++) {
             this.mapData[y] = [];
             for (let x = 0; x < this.mapWidth; x++) {
-                const noiseValue = this.perlin2(x * scale + seed, y * scale + seed);
+                const noiseValue = this.perlin2(x * this.scale + seed, y * this.scale + seed);
                 
+                //assigning terrain type to noise values
                 this.mapData[y][x] = 
                     noiseValue < -0.3 ? "water2" :
                     noiseValue < -0.2 ? "water" :
@@ -88,13 +140,57 @@ class Map extends Phaser.Scene {
             }
         }
     }
-    
+       
     createTiles() {
+        //terrain layer
+        this.terrainLayer = this.add.group();
         this.mapData.forEach((row, y) => {
             row.forEach((terrain, x) => {
-                this.add.image(x * this.tileSize, y * this.tileSize, terrain).setOrigin(0);
+                this.terrainLayer.create(x * this.tileSize, y * this.tileSize, terrain).setOrigin(0);
             });
         });
+    
+        //road layer
+        this.roadLayer = this.add.group();
+        this.mapData.forEach((row, y) => {
+            row.forEach((tile, x) => {
+                if (tile === 'horizontalRoad' || tile === 'verticalRoad' || tile === 'intersection') {
+                    this.roadLayer.create(x * this.tileSize, y * this.tileSize, tile).setOrigin(0);
+                }
+            });
+        });
+    }
+
+    clearTiles() {
+        //clear tiles
+        this.terrainLayer.clear(true, true); 
+        this.roadLayer.clear(true, true); 
+    }
+
+    createPlayer() {
+        // clear previous sprite
+        if (this.player) {
+            this.player.destroy();
+        }
+    
+        //valid spawn points
+        const validTiles = [];
+        for (let y = 0; y < this.mapHeight; y++) {
+            for (let x = 0; x < this.mapWidth; x++) {
+                if (this.mapData[y][x] !== "water" && this.mapData[y][x] !== "water2") {
+                    validTiles.push({ x: x * this.tileSize, y: y * this.tileSize });
+                }
+            }
+        }
+    
+        // Random point not in water
+        const randomIndex = Phaser.Math.Between(0, validTiles.length - 1);
+        const spawnPoint = validTiles[randomIndex];
+    
+        //create player
+        this.player = this.physics.add.sprite(spawnPoint.x, spawnPoint.y, 'playerSprite');
+        this.player.setCollideWorldBounds(true);
+        this.player.setScale(2);
     }
     
     //adapted perlin noise function

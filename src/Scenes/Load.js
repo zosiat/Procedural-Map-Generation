@@ -17,13 +17,11 @@ class Load extends Phaser.Scene {
         this.load.image("water", "waterTile.png");
         this.load.image("water2", "water2Tile.png");
         this.load.image("stone", "stoneTile.png");
+        this.load.image("playerSprite", "redCircle.png");
 
-
-        //load the tilemap as a spritesheet
-        //this.load.spritesheet("tilemap sheet", "tilemap_packed.png", {
-        //    frameWidth: 16,
-        //    frameHeight: 16
-        //});
+        this.load.image("horizontalRoad", "horizontalrd.png");
+        this.load.image("verticalRoad", "verticalrd.png");
+        this.load.image("intersection", "intersect.png");
 
     }
 
